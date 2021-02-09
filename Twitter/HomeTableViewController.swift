@@ -10,8 +10,10 @@ import UIKit
 
 class HomeTableViewController: UITableViewController {
     
+    let myRefreshControl = UIRefreshControl()
+    let numberOfTweets: Int! = 20
+    
     var tweetArray = [NSDictionary]()
-    var numberOfTweets: Int!
 
     @IBAction func onLogout(_ sender: Any) {
         TwitterAPICaller.client?.logout()
@@ -22,14 +24,22 @@ class HomeTableViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         loadTweets()
+        
+        myRefreshControl.addTarget(self, action: #selector(loadTweets), for: .valueChanged)
+        tableView.refreshControl = myRefreshControl
     }
     
-    func loadTweets(){
+    @objc func loadTweets(){
+        self.tweetArray.removeAll()
+        getTweets()
+        self.myRefreshControl.endRefreshing()
+    }
+    
+    func getTweets(){
         let retrieveURL = "https://api.twitter.com/1.1/statuses/home_timeline.json"
-        let params = ["count": 10]
-        TwitterAPICaller.client?.getDictionariesRequest(url: retrieveURL, parameters: params, success: { (tweets: [NSDictionary]) in
+        let params = ["count": numberOfTweets]
+        TwitterAPICaller.client?.getDictionariesRequest(url: retrieveURL, parameters: params as [String : Any], success: { (tweets: [NSDictionary]) in
             
-            self.tweetArray.removeAll()
             for tweet in tweets{
                 self.tweetArray.append(tweet)
             }
@@ -37,6 +47,12 @@ class HomeTableViewController: UITableViewController {
         }, failure: { (Error) in
             print("Could not retrieve tweets.")
         })
+    }
+    
+    override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        if (indexPath.row + 1 == tweetArray.count){
+            getTweets()
+        }
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
